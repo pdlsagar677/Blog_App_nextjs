@@ -58,7 +58,7 @@ export default function SignupForm() {
       if (res.ok) {
         setMessage("🎉 Signup successful! Redirecting to login...");
         setTimeout(() => {
-          router.push("/home");
+          router.push("/login");
         }, 2000);
       } else {
         setErrors(data.errors || {});

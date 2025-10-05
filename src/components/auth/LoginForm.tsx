@@ -1,16 +1,21 @@
+// components/auth/LoginForm.tsx
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Eye, EyeOff, User, Mail, Lock } from "lucide-react";
+import { useAuthStore } from "@/store/useAuthStore";
 
-export default function LoginPage() {
+export default function LoginForm() {
   const [form, setForm] = useState({ emailOrUsername: "", password: "" });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
+  
+  // Get login function from auth store
+  const { login } = useAuthStore();
 
   const handleChange = (field: string, value: string) => {
     setForm(prev => ({ ...prev, [field]: value }));
@@ -44,6 +49,8 @@ export default function LoginPage() {
       const data = await res.json();
       
       if (res.ok) {
+        // Update auth store - THIS IS THE FIXED LINE
+        login(data.user);
         setMessage("🎉 Login successful! Redirecting...");
         setTimeout(() => {
           router.push("/home");
