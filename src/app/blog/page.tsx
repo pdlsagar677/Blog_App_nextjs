@@ -19,6 +19,8 @@ export default function BlogPage() {
     setIsClient(true);
   }, []);
 
+
+
   const posts = getAllPosts();
 
   useEffect(() => {

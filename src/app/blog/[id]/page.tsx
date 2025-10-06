@@ -208,70 +208,70 @@ export default function BlogPostPage() {
         </article>
 
         {/* Comments Section */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Comments ({safeArrayLength(post.comments)})</h2>
-          
-          {/* Add Comment */}
-          {isLoggedIn ? (
-            <div className="mb-8">
-              <textarea
-                placeholder="Share your thoughts..."
-                rows={3}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors resize-vertical"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-              />
-              <div className="flex justify-end mt-3">
-                <button
-                  onClick={handleAddComment}
-                  disabled={!comment.trim()}
-                  className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-                >
-                  <Send className="w-4 h-4" />
-                  Post Comment
-                </button>
-              </div>
+       <div className="bg-white rounded-2xl shadow-xl p-8">
+  <h2 className="text-2xl font-bold text-gray-900 mb-6">Comments ({safeArrayLength(post.comments)})</h2>
+  
+  {/* Add Comment */}
+  {isLoggedIn ? (
+    <div className="mb-8">
+      <textarea
+        placeholder="Share your thoughts..."
+        rows={4}
+        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors text-gray-900 placeholder-gray-400 bg-white text-lg"
+        value={comment}
+        onChange={(e) => setComment(e.target.value)}
+      />
+      <div className="flex justify-end mt-3">
+        <button
+          onClick={handleAddComment}
+          disabled={!comment.trim()}
+          className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+        >
+          <Send className="w-4 h-4" />
+          Post Comment
+        </button>
+      </div>
+    </div>
+  ) : (
+    <div className="bg-gray-50 rounded-lg p-4 text-center mb-6">
+      <p className="text-gray-600">
+        <Link href="/login" className="text-blue-500 hover:text-blue-600 font-medium">
+          Log in
+        </Link>{" "}
+        to join the conversation
+      </p>
+    </div>
+  )}
+  
+  {/* Comments List */}
+  <div className="space-y-6">
+    {safeArrayLength(post.comments) === 0 ? (
+      <p className="text-gray-500 text-center py-8">No comments yet. Be the first to comment!</p>
+    ) : (
+      post.comments.map((comment) => (
+        <div key={comment.id} className="border-b border-gray-200 pb-6 last:border-b-0">
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              <span className="font-semibold text-gray-900">{comment.authorName}</span>
+              <span className="text-gray-500 text-sm ml-3">
+                {formatDate(comment.createdAt)}
+              </span>
             </div>
-          ) : (
-            <div className="bg-gray-50 rounded-lg p-4 text-center mb-6">
-              <p className="text-gray-600">
-                <Link href="/login" className="text-blue-500 hover:text-blue-600 font-medium">
-                  Log in
-                </Link>{" "}
-                to join the conversation
-              </p>
-            </div>
-          )}
-          
-          {/* Comments List */}
-          <div className="space-y-6">
-            {safeArrayLength(post.comments) === 0 ? (
-              <p className="text-gray-500 text-center py-8">No comments yet. Be the first to comment!</p>
-            ) : (
-              post.comments.map((comment) => (
-                <div key={comment.id} className="border-b border-gray-200 pb-6 last:border-b-0">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <span className="font-semibold text-gray-900">{comment.authorName}</span>
-                      <span className="text-gray-500 text-sm ml-3">
-                        {formatDate(comment.createdAt)}
-                      </span>
-                    </div>
-                    {isLoggedIn && (user?.id === comment.authorId || user?.isAdmin) && (
-                      <button
-                        onClick={() => handleDeleteComment(comment.id)}
-                        className="text-red-500 hover:text-red-700 transition-colors"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    )}
-                  </div>
-                  <p className="text-gray-700">{comment.text}</p>
-                </div>
-              ))
+            {isLoggedIn && (user?.id === comment.authorId || user?.isAdmin) && (
+              <button
+                onClick={() => handleDeleteComment(comment.id)}
+                className="text-red-500 hover:text-red-700 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             )}
           </div>
+          <p className="text-gray-700 text-lg">{comment.text}</p>
         </div>
+      ))
+    )}
+  </div>
+</div>
       </div>
     </div>
   );
