@@ -31,7 +31,7 @@ const Navbar = () => {
       <div className="container mx-auto px-6">
         <div className="flex justify-between items-center py-4">
           {/* Logo */}
-          <Link href="/home" className="flex items-center space-x-3">
+          <Link href="/" className="flex items-center space-x-3">
             <div className="bg-blue-500 p-2 rounded-lg">
               <svg 
                 className="w-8 h-8 text-white" 

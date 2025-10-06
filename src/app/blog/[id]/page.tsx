@@ -5,12 +5,13 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBlogStore } from "@/store/useBlogStore";
-import { ArrowLeft, Calendar, User, Heart, MessageCircle, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Calendar, User, Heart, MessageCircle, Send, Trash2, LogIn } from "lucide-react";
 
 export default function BlogPostPage() {
   const [comment, setComment] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isClient, setIsClient] = useState(false);
+  const [authChecked, setAuthChecked] = useState(false);
   
   const params = useParams();
   const router = useRouter();
@@ -22,11 +23,20 @@ export default function BlogPostPage() {
 
   useEffect(() => {
     setIsClient(true);
-    // Reset loading when post changes
-    setIsLoading(true);
-    const timer = setTimeout(() => setIsLoading(false), 500);
-    return () => clearTimeout(timer);
-  }, [postId]); // Add postId as dependency
+    
+    // Check authentication status
+    if (!isLoggedIn) {
+      const timer = setTimeout(() => {
+        setAuthChecked(true);
+        setIsLoading(false);
+      }, 1000);
+      return () => clearTimeout(timer);
+    } else {
+      setAuthChecked(true);
+      const timer = setTimeout(() => setIsLoading(false), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoggedIn, postId]);
 
   // Safe array check and includes function
   const safeIncludes = (array: any, value: any) => {
@@ -38,10 +48,21 @@ export default function BlogPostPage() {
     return Array.isArray(array) ? array.length : 0;
   };
 
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (authChecked && !isLoggedIn) {
+      const timer = setTimeout(() => {
+        router.push('/login');
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [authChecked, isLoggedIn, router]);
+
+  // Show loading while checking authentication
   if (!isClient || isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <div className="bg-white rounded-2xl shadow-xl p-8 text-center">
+        <div className="bg-white rounded-2xl shadow-xl p-8 text-center max-w-md">
           <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Loading blog post...</p>
         </div>
@@ -49,6 +70,42 @@ export default function BlogPostPage() {
     );
   }
 
+  // Show authentication required message
+  if (authChecked && !isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-6">
+        <div className="bg-white rounded-2xl shadow-xl p-8 text-center max-w-md">
+          <div className="bg-yellow-100 p-4 rounded-lg mb-6">
+            <LogIn className="w-12 h-12 text-yellow-600 mx-auto mb-3" />
+            <h2 className="text-xl font-bold text-yellow-800">Authentication Required</h2>
+          </div>
+          <p className="text-gray-600 mb-4">
+            Please log in to read this blog post.
+          </p>
+          <p className="text-gray-500 text-sm mb-6">
+            Redirecting to login page...
+          </p>
+          <div className="flex flex-col gap-3">
+            <Link
+              href="/login"
+              className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center justify-center gap-2"
+            >
+              <LogIn className="w-4 h-4" />
+              Login Now
+            </Link>
+            <Link
+              href="/blog"
+              className="border-2 border-gray-300 text-gray-700 hover:border-blue-500 hover:text-blue-500 px-6 py-3 rounded-lg font-medium transition-colors"
+            >
+              Back to Blogs
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show post not found if post doesn't exist
   if (!post) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-6">
@@ -208,70 +265,70 @@ export default function BlogPostPage() {
         </article>
 
         {/* Comments Section */}
-       <div className="bg-white rounded-2xl shadow-xl p-8">
-  <h2 className="text-2xl font-bold text-gray-900 mb-6">Comments ({safeArrayLength(post.comments)})</h2>
-  
-  {/* Add Comment */}
-  {isLoggedIn ? (
-    <div className="mb-8">
-      <textarea
-        placeholder="Share your thoughts..."
-        rows={4}
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors text-gray-900 placeholder-gray-400 bg-white text-lg"
-        value={comment}
-        onChange={(e) => setComment(e.target.value)}
-      />
-      <div className="flex justify-end mt-3">
-        <button
-          onClick={handleAddComment}
-          disabled={!comment.trim()}
-          className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-        >
-          <Send className="w-4 h-4" />
-          Post Comment
-        </button>
-      </div>
-    </div>
-  ) : (
-    <div className="bg-gray-50 rounded-lg p-4 text-center mb-6">
-      <p className="text-gray-600">
-        <Link href="/login" className="text-blue-500 hover:text-blue-600 font-medium">
-          Log in
-        </Link>{" "}
-        to join the conversation
-      </p>
-    </div>
-  )}
-  
-  {/* Comments List */}
-  <div className="space-y-6">
-    {safeArrayLength(post.comments) === 0 ? (
-      <p className="text-gray-500 text-center py-8">No comments yet. Be the first to comment!</p>
-    ) : (
-      post.comments.map((comment) => (
-        <div key={comment.id} className="border-b border-gray-200 pb-6 last:border-b-0">
-          <div className="flex justify-between items-start mb-2">
-            <div>
-              <span className="font-semibold text-gray-900">{comment.authorName}</span>
-              <span className="text-gray-500 text-sm ml-3">
-                {formatDate(comment.createdAt)}
-              </span>
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Comments ({safeArrayLength(post.comments)})</h2>
+          
+          {/* Add Comment */}
+          {isLoggedIn ? (
+            <div className="mb-8">
+              <textarea
+                placeholder="Share your thoughts..."
+                rows={4}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors text-gray-900 placeholder-gray-400 bg-white text-lg"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+              />
+              <div className="flex justify-end mt-3">
+                <button
+                  onClick={handleAddComment}
+                  disabled={!comment.trim()}
+                  className="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+                >
+                  <Send className="w-4 h-4" />
+                  Post Comment
+                </button>
+              </div>
             </div>
-            {isLoggedIn && (user?.id === comment.authorId || user?.isAdmin) && (
-              <button
-                onClick={() => handleDeleteComment(comment.id)}
-                className="text-red-500 hover:text-red-700 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+          ) : (
+            <div className="bg-gray-50 rounded-lg p-4 text-center mb-6">
+              <p className="text-gray-600">
+                <Link href="/login" className="text-blue-500 hover:text-blue-600 font-medium">
+                  Log in
+                </Link>{" "}
+                to join the conversation
+              </p>
+            </div>
+          )}
+          
+          {/* Comments List */}
+          <div className="space-y-6">
+            {safeArrayLength(post.comments) === 0 ? (
+              <p className="text-gray-500 text-center py-8">No comments yet. Be the first to comment!</p>
+            ) : (
+              post.comments.map((comment) => (
+                <div key={comment.id} className="border-b border-gray-200 pb-6 last:border-b-0">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <span className="font-semibold text-gray-900">{comment.authorName}</span>
+                      <span className="text-gray-500 text-sm ml-3">
+                        {formatDate(comment.createdAt)}
+                      </span>
+                    </div>
+                    {isLoggedIn && (user?.id === comment.authorId || user?.isAdmin) && (
+                      <button
+                        onClick={() => handleDeleteComment(comment.id)}
+                        className="text-red-500 hover:text-red-700 transition-colors"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-gray-700 text-lg">{comment.text}</p>
+                </div>
+              ))
             )}
           </div>
-          <p className="text-gray-700 text-lg">{comment.text}</p>
         </div>
-      ))
-    )}
-  </div>
-</div>
       </div>
     </div>
   );
