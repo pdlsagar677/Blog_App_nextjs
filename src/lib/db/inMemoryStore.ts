@@ -1,4 +1,6 @@
 // src/lib/db/inMemoryStore.ts
+import bcryptjs from 'bcryptjs';
+
 type User = {
   id: string;
   username: string;
@@ -16,10 +18,54 @@ type Session = {
   createdAt: number;
 };
 
+// Function to initialize admin user from environment variables
+const initializeAdminUser = (): User | null => {
+  // Only create admin user if all required env variables are present
+  if (
+    process.env.ADMIN_USERNAME &&
+    process.env.ADMIN_EMAIL &&
+    process.env.ADMIN_PASSWORD &&
+    process.env.ADMIN_PHONE &&
+    process.env.ADMIN_GENDER
+  ) {
+    try {
+      // For development, use a simple approach. In production, use proper hashing
+      // Note: In a real app, you should hash this asynchronously
+      const passwordHash = bcryptjs.hashSync(process.env.ADMIN_PASSWORD, 12);
+      
+      return {
+        id: 'admin-1',
+        username: process.env.ADMIN_USERNAME,
+        email: process.env.ADMIN_EMAIL,
+        phoneNumber: process.env.ADMIN_PHONE,
+        gender: process.env.ADMIN_GENDER as 'male' | 'female' | 'other',
+        passwordHash: passwordHash,
+        isAdmin: true,
+        createdAt: new Date()
+      };
+    } catch (error) {
+      console.error('Error creating admin user:', error);
+      return null;
+    }
+  }
+  
+  console.warn('Admin credentials not found in environment variables. Please check your .env.local file.');
+  return null;
+};
+
 export const db = {
   users: new Map<string, User>(),
   sessions: new Map<string, Session>(),
 };
+
+// Initialize admin user when the module loads
+const adminUser = initializeAdminUser();
+if (adminUser) {
+  db.users.set(adminUser.id, adminUser);
+  console.log('✅ Admin user initialized from environment variables');
+} else {
+  console.warn('❌ No admin user created. Please check your environment variables in .env.local');
+}
 
 // Helper to create UUIDs (simple version)
 export const generateId = () => Math.random().toString(36).slice(2);
@@ -118,4 +164,42 @@ export const getAllUsers = (): User[] => {
 // Delete user (for admin purposes)
 export const deleteUser = (userId: string): boolean => {
   return db.users.delete(userId);
+};
+
+// Make user admin
+export const makeUserAdmin = (userId: string): boolean => {
+  const user = db.users.get(userId);
+  if (user) {
+    user.isAdmin = true;
+    db.users.set(userId, user);
+    return true;
+  }
+  return false;
+};
+
+// Remove admin privileges
+export const removeUserAdmin = (userId: string): boolean => {
+  const user = db.users.get(userId);
+  if (user && user.id !== 'admin-1') { // Prevent removing main admin
+    user.isAdmin = false;
+    db.users.set(userId, user);
+    return true;
+  }
+  return false;
+};
+
+// Get admin users
+export const getAdminUsers = (): User[] => {
+  return [...db.users.values()].filter(user => user.isAdmin);
+};
+
+// Verify password
+export const verifyPassword = (password: string, hashedPassword: string): boolean => {
+  return bcryptjs.compareSync(password, hashedPassword);
+};
+
+// Check if user is admin
+export const isUserAdmin = (userId: string): boolean => {
+  const user = db.users.get(userId);
+  return user ? user.isAdmin : false;
 };

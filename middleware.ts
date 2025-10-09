@@ -8,8 +8,15 @@ export function middleware(req: NextRequest) {
 
   if (isProtected) {
     const session = token ? db.sessions.get(token) : null;
+    
     if (!session) {
       return NextResponse.redirect(new URL("/login", req.url));
+    }
+
+    // Check if user is admin
+    const user = [...db.users.values()].find(u => u.id === session.userId);
+    if (!user?.isAdmin) {
+      return NextResponse.redirect(new URL("/", req.url));
     }
   }
   return NextResponse.next();
