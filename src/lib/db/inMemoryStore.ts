@@ -156,17 +156,17 @@ export const findUserByPhone = (phoneNumber: string): User | undefined => {
   );
 };
 
-// Get all users (for admin purposes)
+// Get all users (for admin purposes) - Legacy function
 export const getAllUsers = (): User[] => {
   return [...db.users.values()];
 };
 
-// Delete user (for admin purposes)
+// Delete user (for admin purposes) - Legacy function
 export const deleteUser = (userId: string): boolean => {
   return db.users.delete(userId);
 };
 
-// Make user admin
+// Make user admin - Legacy function
 export const makeUserAdmin = (userId: string): boolean => {
   const user = db.users.get(userId);
   if (user) {
@@ -177,7 +177,7 @@ export const makeUserAdmin = (userId: string): boolean => {
   return false;
 };
 
-// Remove admin privileges
+// Remove admin privileges - Legacy function
 export const removeUserAdmin = (userId: string): boolean => {
   const user = db.users.get(userId);
   if (user && user.id !== 'admin-1') { // Prevent removing main admin
@@ -202,4 +202,141 @@ export const verifyPassword = (password: string, hashedPassword: string): boolea
 export const isUserAdmin = (userId: string): boolean => {
   const user = db.users.get(userId);
   return user ? user.isAdmin : false;
+};
+
+// ==================== ADMIN-SPECIFIC USER MANAGEMENT FUNCTIONS ====================
+
+// Get all users without password hash (for admin purposes)
+export const adminGetAllUsers = (): Omit<User, 'passwordHash'>[] => {
+  return [...db.users.values()].map(user => {
+    const { passwordHash, ...userWithoutPassword } = user;
+    return userWithoutPassword;
+  });
+};
+
+// Update user with validation (for admin purposes)
+export const adminUpdateUser = (userId: string, updates: Partial<Omit<User, 'id' | 'passwordHash' | 'createdAt'>>): { success: boolean; user?: Omit<User, 'passwordHash'>; error?: string } => {
+  const user = db.users.get(userId);
+  if (!user) {
+    return { success: false, error: 'User not found' };
+  }
+
+  // Check if username is taken by another user
+  if (updates.username && updates.username !== user.username) {
+    if (isUsernameTaken(updates.username)) {
+      return { success: false, error: 'Username already taken' };
+    }
+  }
+
+  // Check if email is taken by another user
+  if (updates.email && updates.email !== user.email) {
+    if (isEmailTaken(updates.email)) {
+      return { success: false, error: 'Email already taken' };
+    }
+  }
+
+  // Check if phone number is taken by another user
+  if (updates.phoneNumber && updates.phoneNumber !== user.phoneNumber) {
+    if (isPhoneNumberTaken(updates.phoneNumber)) {
+      return { success: false, error: 'Phone number already taken' };
+    }
+  }
+
+  const updatedUser = {
+    ...user,
+    ...updates
+  };
+
+  db.users.set(userId, updatedUser);
+  
+  const { passwordHash, ...userWithoutPassword } = updatedUser;
+  return { success: true, user: userWithoutPassword };
+};
+
+// Delete user with safety checks (for admin purposes)
+export const adminDeleteUser = (userId: string, currentAdminId: string): { success: boolean; error?: string } => {
+  const user = db.users.get(userId);
+  if (!user) {
+    return { success: false, error: 'User not found' };
+  }
+
+  // Prevent self-deletion
+  if (userId === currentAdminId) {
+    return { success: false, error: 'Cannot delete your own account' };
+  }
+
+  // Prevent deleting the main admin user
+  if (userId === 'admin-1') {
+    return { success: false, error: 'Cannot delete the main admin user' };
+  }
+
+  db.users.delete(userId);
+  
+  // Also delete user's sessions
+  for (const [token, session] of db.sessions.entries()) {
+    if (session.userId === userId) {
+      db.sessions.delete(token);
+    }
+  }
+
+  return { success: true };
+};
+
+// Toggle admin status with safety checks
+export const adminToggleAdminStatus = (userId: string, currentAdminId: string): { success: boolean; user?: Omit<User, 'passwordHash'>; error?: string } => {
+  const user = db.users.get(userId);
+  if (!user) {
+    return { success: false, error: 'User not found' };
+  }
+
+  // Prevent modifying own admin status
+  if (userId === currentAdminId) {
+    return { success: false, error: 'Cannot modify your own admin status' };
+  }
+
+  // Prevent modifying the main admin user
+  if (userId === 'admin-1') {
+    return { success: false, error: 'Cannot modify the main admin user' };
+  }
+
+  const updatedUser = {
+    ...user,
+    isAdmin: !user.isAdmin
+  };
+
+  db.users.set(userId, updatedUser);
+  
+  const { passwordHash, ...userWithoutPassword } = updatedUser;
+  return { success: true, user: userWithoutPassword };
+};
+
+// Get user by ID without password hash
+export const adminGetUserById = (userId: string): Omit<User, 'passwordHash'> | undefined => {
+  const user = db.users.get(userId);
+  if (!user) return undefined;
+  
+  const { passwordHash, ...userWithoutPassword } = user;
+  return userWithoutPassword;
+};
+
+// Search users by username or email
+export const adminSearchUsers = (query: string): Omit<User, 'passwordHash'>[] => {
+  const lowerQuery = query.toLowerCase();
+  return adminGetAllUsers().filter(user => 
+    user.username.toLowerCase().includes(lowerQuery) ||
+    user.email.toLowerCase().includes(lowerQuery)
+  );
+};
+
+// Get user statistics
+export const adminGetUserStats = () => {
+  const users = adminGetAllUsers();
+  return {
+    total: users.length,
+    admins: users.filter(user => user.isAdmin).length,
+    regular: users.filter(user => !user.isAdmin).length,
+    male: users.filter(user => user.gender === 'male').length,
+    female: users.filter(user => user.gender === 'female').length,
+    other: users.filter(user => user.gender === 'other').length,
+  };
 };
