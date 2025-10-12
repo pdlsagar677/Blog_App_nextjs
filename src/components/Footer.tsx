@@ -45,8 +45,7 @@ const Footer = () => {
             <ul className="space-y-2">
               <li><Link href="/about" className="text-gray-400 hover:text-white transition-colors">About Us</Link></li>
               <li><Link href="/blog" className="text-gray-400 hover:text-white transition-colors">Browse Blogs</Link></li>
-              <li><Link href="/write" className="text-gray-400 hover:text-white transition-colors">Start Writing</Link></li>
-              <li><Link href="/contact" className="text-gray-400 hover:text-white transition-colors">Contact</Link></li>
+              <li><Link href="/create-post" className="text-gray-400 hover:text-white transition-colors">Start Writing</Link></li>
             </ul>
           </div>
 
@@ -54,10 +53,10 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4">Support</h3>
             <ul className="space-y-2">
-              <li><Link href="/help" className="text-gray-400 hover:text-white transition-colors">Help Center</Link></li>
-              <li><Link href="/privacy" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="text-gray-400 hover:text-white transition-colors">Terms of Service</Link></li>
-              <li><Link href="/community" className="text-gray-400 hover:text-white transition-colors">Community Guidelines</Link></li>
+              <li><Link href="/#" className="text-gray-400 hover:text-white transition-colors">Help Center</Link></li>
+              <li><Link href="/#" className="text-gray-400 hover:text-white transition-colors">Privacy Policy</Link></li>
+              <li><Link href="/#" className="text-gray-400 hover:text-white transition-colors">Terms of Service</Link></li>
+              <li><Link href="/#" className="text-gray-400 hover:text-white transition-colors">Community Guidelines</Link></li>
             </ul>
           </div>
         </div>
@@ -68,13 +67,13 @@ const Footer = () => {
             © 2024 BlogHub. All rights reserved.
           </p>
           <div className="flex space-x-6 mt-4 md:mt-0">
-            <Link href="/privacy" className="text-gray-400 hover:text-white text-sm transition-colors">
+            <Link href="/#" className="text-gray-400 hover:text-white text-sm transition-colors">
               Privacy
             </Link>
-            <Link href="/terms" className="text-gray-400 hover:text-white text-sm transition-colors">
+            <Link href="/#" className="text-gray-400 hover:text-white text-sm transition-colors">
               Terms
             </Link>
-            <Link href="/cookies" className="text-gray-400 hover:text-white text-sm transition-colors">
+            <Link href="/#" className="text-gray-400 hover:text-white text-sm transition-colors">
               Cookies
             </Link>
           </div>

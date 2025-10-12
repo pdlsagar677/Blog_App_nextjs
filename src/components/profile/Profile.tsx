@@ -3,7 +3,9 @@
 
 import React, { useEffect, useState } from "react";
 import { useAuthStore } from "@/store/useAuthStore";
+import { useBlogStore } from "@/store/useBlogStore";
 import { useRouter } from "next/navigation";
+import { Calendar, Heart, MessageCircle, Eye, Edit, Trash2 } from "lucide-react";
 
 interface ProfileFormData {
   username: string;
@@ -14,6 +16,7 @@ interface ProfileFormData {
 const Profile: React.FC = () => {
   const router = useRouter();
   const { user, isLoggedIn, isLoading, logout, checkAuth, updateProfile } = useAuthStore();
+  const { getPostsByAuthor, deletePost } = useBlogStore();
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -24,6 +27,8 @@ const Profile: React.FC = () => {
     email: '',
     phoneNumber: ''
   });
+  const [userPosts, setUserPosts] = useState<any[]>([]);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   // Check authentication on component mount
   useEffect(() => {
@@ -42,7 +47,7 @@ const Profile: React.FC = () => {
     verifyAuth();
   }, [checkAuth]);
 
-  // Populate form when user data is available
+  // Populate form when user data is available and load user posts
   useEffect(() => {
     if (user) {
       setFormData({
@@ -50,8 +55,12 @@ const Profile: React.FC = () => {
         email: user.email,
         phoneNumber: user.phoneNumber
       });
+      
+      // Load user's posts
+      const posts = getPostsByAuthor(user.id);
+      setUserPosts(posts);
     }
-  }, [user]);
+  }, [user, getPostsByAuthor]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -132,6 +141,42 @@ const Profile: React.FC = () => {
     }
   };
 
+  const handleDeletePost = async (postId: string) => {
+    if (!confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+      return;
+    }
+
+    setIsDeleting(postId);
+    try {
+      deletePost(postId);
+      // Update the posts list
+      const updatedPosts = userPosts.filter(post => post.id !== postId);
+      setUserPosts(updatedPosts);
+      setMessage({ type: 'success', text: 'Post deleted successfully!' });
+    } catch (error) {
+      console.error('Error deleting post:', error);
+      setMessage({ type: 'error', text: 'Failed to delete post. Please try again.' });
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
+  const handleEditPost = (postId: string) => {
+    router.push(`/edit-post/${postId}`);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  const safeArrayLength = (array: any) => {
+    return Array.isArray(array) ? array.length : 0;
+  };
+
   // Show loading during initial auth check
   if (!hasCheckedAuth || isLoading) {
     return (
@@ -177,7 +222,7 @@ const Profile: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">
@@ -405,6 +450,111 @@ const Profile: React.FC = () => {
               </div>
             )}
           </form>
+        </div>
+
+        {/* My Posts Section */}
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          <div className="flex justify-between items-center mb-8">
+            <h2 className="text-2xl font-bold text-gray-900">My Blog Posts</h2>
+            <button
+              onClick={() => router.push("/create-post")}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors flex items-center gap-2"
+            >
+              <Edit className="w-4 h-4" />
+              Write New Post
+            </button>
+          </div>
+
+          {userPosts.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="bg-gray-100 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                <Eye className="w-10 h-10 text-gray-400" />
+              </div>
+              <h3 className="text-xl font-bold text-gray-900 mb-3">No Posts Yet</h3>
+              <p className="text-gray-600 mb-6">
+                You haven't published any blog posts yet. Start sharing your stories with the community!
+              </p>
+              <button
+                onClick={() => router.push("/create-post")}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-medium transition-colors"
+              >
+                Create Your First Post
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {userPosts.map((post) => (
+                <div key={post.id} className="border border-gray-200 rounded-xl hover:shadow-lg transition-all duration-300">
+                  {/* Post Image */}
+                  {post.imageUrl && (
+                    <div className="h-48 overflow-hidden rounded-t-xl">
+                      <img
+                        src={post.imageUrl}
+                        alt={post.title}
+                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Post Content */}
+                  <div className="p-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-2 line-clamp-2">
+                      {post.title}
+                    </h3>
+                    
+                    <p className="text-gray-600 mb-4 line-clamp-3 text-sm">
+                      {post.description}
+                    </p>
+                    
+                    {/* Post Meta */}
+                    <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        <span>{formatDate(post.createdAt)}</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1">
+                          <Heart className="w-4 h-4" />
+                          <span>{safeArrayLength(post.likes)}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MessageCircle className="w-4 h-4" />
+                          <span>{safeArrayLength(post.comments)}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Action Buttons */}
+                    <div className="flex items-center gap-3 pt-4 border-t border-gray-100">
+                      <button
+                        onClick={() => router.push(`/blog/${post.id}`)}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors text-center"
+                      >
+                        View Post
+                      </button>
+                    
+                       
+                      <button
+                        onClick={() => handleDeletePost(post.id)}
+                        disabled={isDeleting === post.id}
+                        className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg transition-colors disabled:opacity-50"
+                        title="Delete Post"
+                      >
+                        {isDeleting === post.id ? (
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <Trash2 className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

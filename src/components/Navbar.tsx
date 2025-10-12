@@ -116,12 +116,7 @@ const Navbar = () => {
                         >
                           Profile
                         </Link>
-                        <Link
-                          href="/dashboard"
-                          className="block px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors"
-                        >
-                          Dashboard
-                        </Link>
+                       
                         <Link
                           href="/create-post"
                           className="block px-4 py-2 text-gray-700 hover:bg-gray-50 hover:text-blue-600 transition-colors"

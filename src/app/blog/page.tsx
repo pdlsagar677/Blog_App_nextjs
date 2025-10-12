@@ -4,39 +4,46 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBlogStore } from "@/store/useBlogStore";
-import { Plus, Calendar, User, Heart, MessageCircle, ArrowRight, Search } from "lucide-react";
+import {
+  Plus,
+  Calendar,
+  User,
+  Heart,
+  MessageCircle,
+  ArrowRight,
+  Search,
+} from "lucide-react";
 
 export default function BlogPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filteredPosts, setFilteredPosts] = useState<any[]>([]);
   const [isClient, setIsClient] = useState(false);
-  
+
   const { isLoggedIn, user } = useAuthStore();
   const { getAllPosts, likePost, unlikePost } = useBlogStore();
-  
+
   // Initialize state after component mounts to avoid hydration mismatch
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-
-
   const posts = getAllPosts();
 
   useEffect(() => {
-    const filtered = posts.filter(post =>
-      post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      post.authorName.toLowerCase().includes(searchTerm.toLowerCase())
+    const filtered = posts.filter(
+      (post) =>
+        post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        post.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        post.authorName.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredPosts(filtered);
   }, [searchTerm, posts]);
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
@@ -48,8 +55,8 @@ export default function BlogPage() {
 
   const handleLike = (postId: string) => {
     if (!isLoggedIn || !user) return;
-    
-    const post = posts.find(p => p.id === postId);
+
+    const post = posts.find((p) => p.id === postId);
     if (safeIncludes(post?.likes, user.id)) {
       unlikePost(postId, user.id);
     } else {
@@ -59,7 +66,7 @@ export default function BlogPage() {
 
   const isPostLiked = (postId: string) => {
     if (!isLoggedIn || !user) return false;
-    const post = posts.find(p => p.id === postId);
+    const post = posts.find((p) => p.id === postId);
     return safeIncludes(post?.likes, user.id);
   };
 
@@ -78,7 +85,9 @@ export default function BlogPage() {
   const getTotalComments = () => {
     try {
       return posts.reduce((total, post) => {
-        const commentsCount = Array.isArray(post.comments) ? post.comments.length : 0;
+        const commentsCount = Array.isArray(post.comments)
+          ? post.comments.length
+          : 0;
         return total + commentsCount;
       }, 0);
     } catch (error) {
@@ -88,7 +97,7 @@ export default function BlogPage() {
 
   const getUniqueWriters = () => {
     try {
-      return [...new Set(posts.map(post => post.authorId))].length;
+      return [...new Set(posts.map((post) => post.authorId))].length;
     } catch (error) {
       return 0;
     }
@@ -113,7 +122,8 @@ export default function BlogPage() {
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-gray-900 mb-4">Blog Hub</h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Discover amazing stories, share your thoughts, and connect with writers from around the world.
+            Discover amazing stories, share your thoughts, and connect with
+            writers from around the world.
           </p>
         </div>
 
@@ -157,9 +167,13 @@ export default function BlogPage() {
               <div className="bg-gray-100 w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-6">
                 <MessageCircle className="w-10 h-10 text-gray-400" />
               </div>
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">No Blog Posts Yet</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                No Blog Posts Yet
+              </h3>
               <p className="text-gray-600 mb-6">
-                {searchTerm ? "No posts match your search. Try different keywords." : "Be the first to share your story with the community!"}
+                {searchTerm
+                  ? "No posts match your search. Try different keywords."
+                  : "Be the first to share your story with the community!"}
               </p>
               {isLoggedIn ? (
                 <Link
@@ -182,7 +196,10 @@ export default function BlogPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {filteredPosts.map((post) => (
-              <div key={post.id} className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+              <div
+                key={post.id}
+                className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1"
+              >
                 {/* Image */}
                 {post.imageUrl && (
                   <div className="h-48 overflow-hidden">
@@ -191,22 +208,22 @@ export default function BlogPage() {
                       alt={post.title}
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        e.currentTarget.style.display = 'none';
+                        e.currentTarget.style.display = "none";
                       }}
                     />
                   </div>
                 )}
-                
+
                 {/* Content */}
                 <div className="p-6">
                   <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2">
                     {post.title}
                   </h3>
-                  
+
                   <p className="text-gray-600 mb-4 line-clamp-3">
                     {post.description}
                   </p>
-                  
+
                   {/* Meta Information */}
                   <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
                     <div className="flex items-center gap-4">
@@ -220,7 +237,7 @@ export default function BlogPage() {
                       </div>
                     </div>
                   </div>
-                  
+
                   {/* Engagement Stats */}
                   <div className="flex items-center justify-between border-t border-gray-100 pt-4">
                     <div className="flex items-center gap-4">
@@ -229,20 +246,32 @@ export default function BlogPage() {
                         disabled={!isLoggedIn}
                         className={`flex items-center gap-1 transition-colors ${
                           isPostLiked(post.id)
-                            ? 'text-red-500 hover:text-red-600'
-                            : 'text-gray-400 hover:text-red-500'
-                        } ${!isLoggedIn ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            ? "text-red-500 hover:text-red-600"
+                            : "text-gray-400 hover:text-red-500"
+                        } ${
+                          !isLoggedIn ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
                       >
-                        <Heart className={`w-4 h-4 ${isPostLiked(post.id) ? 'fill-current' : ''}`} />
-                        <span>{Array.isArray(post.likes) ? post.likes.length : 0}</span>
+                        <Heart
+                          className={`w-4 h-4 ${
+                            isPostLiked(post.id) ? "fill-current" : ""
+                          }`}
+                        />
+                        <span>
+                          {Array.isArray(post.likes) ? post.likes.length : 0}
+                        </span>
                       </button>
-                      
+
                       <div className="flex items-center gap-1 text-gray-400">
                         <MessageCircle className="w-4 h-4" />
-                        <span>{Array.isArray(post.comments) ? post.comments.length : 0}</span>
+                        <span>
+                          {Array.isArray(post.comments)
+                            ? post.comments.length
+                            : 0}
+                        </span>
                       </div>
                     </div>
-                    
+
                     <Link
                       href={`/blog/${post.id}`}
                       className="text-blue-500 hover:text-blue-600 font-medium flex items-center gap-1 transition-colors"
@@ -258,37 +287,29 @@ export default function BlogPage() {
         )}
 
         {/* Stats - Only show after client-side hydration */}
-        {isClient && posts.length > 0 && (
-          <div className="mt-16 text-center">
-            <div className="bg-white rounded-2xl shadow-lg p-8 max-w-2xl mx-auto">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Community Stats</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                <div>
-                  <div className="text-3xl font-bold text-blue-600 mb-2">{posts.length}</div>
-                  <div className="text-gray-600">Total Posts</div>
-                </div>
-                <div>
-                  <div className="text-3xl font-bold text-green-600 mb-2">
-                    {getUniqueWriters()}
-                  </div>
-                  <div className="text-gray-600">Writers</div>
-                </div>
-                <div>
-                  <div className="text-3xl font-bold text-red-600 mb-2">
-                    {getTotalLikes()}
-                  </div>
-                  <div className="text-gray-600">Total Likes</div>
-                </div>
-                <div>
-                  <div className="text-3xl font-bold text-purple-600 mb-2">
-                    {getTotalComments()}
-                  </div>
-                  <div className="text-gray-600">Comments</div>
-                </div>
-              </div>
-            </div>
+       {isClient && posts.length > 0 && (
+  <div className="mt-12">
+    <div className="bg-white rounded-xl shadow-md p-6 max-w-md mx-auto">
+      <h3 className="text-xl font-semibold text-gray-800 mb-4 text-center">
+        Community Stats
+      </h3>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="text-center">
+          <div className="text-2xl font-bold text-blue-600 mb-1">
+            {posts.length}
           </div>
-        )}
+          <div className="text-sm text-gray-600">Total Posts</div>
+        </div>
+        <div className="text-center">
+          <div className="text-2xl font-bold text-green-600 mb-1">
+            {getUniqueWriters()}
+          </div>
+          <div className="text-sm text-gray-600">Writers</div>
+        </div>
+      </div>
+    </div>
+  </div>
+)}
       </div>
     </div>
   );
