@@ -458,3 +458,26 @@ export const deleteSession = (token: string): boolean => {
   if (result) saveData(); // Save after deleting session
   return result;
 };
+
+// Add this function to delete user and their posts
+export const deleteUserAndPosts = (userId: string): boolean => {
+  const user = db.users.get(userId);
+  if (!user) return false;
+
+  // Delete user from database
+  const userDeleted = db.users.delete(userId);
+  
+  if (userDeleted) {
+    // Delete user's sessions
+    for (const [token, session] of db.sessions.entries()) {
+      if (session.userId === userId) {
+        db.sessions.delete(token);
+      }
+    }
+    
+    saveData();
+    return true;
+  }
+  
+  return false;
+};

@@ -15,8 +15,8 @@ interface ProfileFormData {
 
 const Profile: React.FC = () => {
   const router = useRouter();
-  const { user, isLoggedIn, isLoading, logout, checkAuth, updateProfile } = useAuthStore();
-  const { getPostsByAuthor, deletePost } = useBlogStore();
+  const { user, isLoggedIn, isLoading, logout, checkAuth, updateProfile, deleteAccount } = useAuthStore();
+  const { getPostsByAuthor, deletePost, deletePostsByAuthor } = useBlogStore();
   const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -29,6 +29,10 @@ const Profile: React.FC = () => {
   });
   const [userPosts, setUserPosts] = useState<any[]>([]);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Check authentication on component mount
   useEffect(() => {
@@ -165,6 +169,52 @@ const Profile: React.FC = () => {
     router.push(`/edit-post/${postId}`);
   };
 
+  const handleDeleteAccount = async () => {
+    if (!deletePassword.trim()) {
+      setDeleteError('Password is required to confirm account deletion');
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    setDeleteError(null);
+
+    try {
+      // First delete user's posts from blog store
+      if (user) {
+        const blogStore = useBlogStore.getState();
+        // Make sure deletePostsByAuthor exists in your blog store
+        if (blogStore.deletePostsByAuthor) {
+          blogStore.deletePostsByAuthor(user.id);
+        }
+      }
+
+      // Then delete the account via API
+      await deleteAccount(deletePassword);
+      
+      setMessage({ type: 'success', text: 'Account and all your posts have been deleted successfully' });
+      setShowDeleteDialog(false);
+      
+      // Redirect to home page after successful deletion
+      setTimeout(() => {
+        router.push('/');
+      }, 2000);
+      
+    } catch (error: any) {
+      console.error('Account deletion error:', error);
+      
+      // Handle specific error messages
+      if (error.message.includes('Unauthorized')) {
+        setDeleteError('Your session has expired. Please log in again.');
+      } else if (error.message.includes('Invalid password')) {
+        setDeleteError('The password you entered is incorrect.');
+      } else {
+        setDeleteError(error.message || 'Failed to delete account. Please try again.');
+      }
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -176,6 +226,9 @@ const Profile: React.FC = () => {
   const safeArrayLength = (array: any) => {
     return Array.isArray(array) ? array.length : 0;
   };
+
+  // Check if user is admin
+  const isAdmin = user?.isAdmin || false;
 
   // Show loading during initial auth check
   if (!hasCheckedAuth || isLoading) {
@@ -453,7 +506,7 @@ const Profile: React.FC = () => {
         </div>
 
         {/* My Posts Section */}
-        <div className="bg-white rounded-2xl shadow-xl p-8">
+        <div className="bg-white rounded-2xl shadow-xl p-8 mb-8">
           <div className="flex justify-between items-center mb-8">
             <h2 className="text-2xl font-bold text-gray-900">My Blog Posts</h2>
             <button
@@ -535,8 +588,6 @@ const Profile: React.FC = () => {
                       >
                         View Post
                       </button>
-                    
-                       
                       <button
                         onClick={() => handleDeletePost(post.id)}
                         disabled={isDeleting === post.id}
@@ -556,6 +607,162 @@ const Profile: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Account Deletion Section - Only show for non-admin users */}
+        {!isAdmin && (
+          <>
+            <div className="bg-white rounded-2xl shadow-xl p-8 border border-red-200">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="flex-1">
+                  <h3 className="text-xl font-bold text-red-800 mb-2">
+                    Delete Account
+                  </h3>
+                  <p className="text-red-600 text-sm">
+                    Once you delete your account, there is no going back. This will permanently 
+                    delete your profile, remove all your blog posts, and cannot be recovered.
+                  </p>
+                </div>
+                
+                <button
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="bg-red-600 hover:bg-red-700 text-white py-3 px-6 rounded-lg font-medium transition-colors whitespace-nowrap"
+                >
+                  Delete Account
+                </button>
+              </div>
+            </div>
+
+            {/* Delete Account Dialog */}
+            {showDeleteDialog && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
+                  {/* Dialog Header */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                      <Trash2 className="w-5 h-5 text-red-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-bold text-gray-900">
+                        Delete Your Account
+                      </h3>
+                      <p className="text-sm text-gray-600">
+                        This action cannot be undone
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Warning Message */}
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0">
+                        <svg className="w-5 h-5 text-red-400 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h4 className="text-sm font-medium text-red-800 mb-1">
+                          This will permanently delete:
+                        </h4>
+                        <ul className="text-xs text-red-700 space-y-1">
+                          <li>• Your profile and account information</li>
+                          <li>• All your blog posts ({userPosts.length} posts)</li>
+                          <li>• All your comments and likes</li>
+                          <li>• Your session and login access</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Password Confirmation */}
+                  <div className="space-y-3 mb-6">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Confirm your password to continue *
+                    </label>
+                    <input
+                      type="password"
+                      value={deletePassword}
+                      onChange={(e) => {
+                        setDeletePassword(e.target.value);
+                        setDeleteError(null);
+                      }}
+                      placeholder="Enter your current password"
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 text-gray-900 placeholder-gray-500 transition-colors"
+                      disabled={isDeletingAccount}
+                      autoFocus
+                    />
+                    {deleteError && (
+                      <p className="text-red-600 text-sm flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        {deleteError}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleDeleteAccount}
+                      disabled={isDeletingAccount || !deletePassword.trim()}
+                      className="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 px-4 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {isDeletingAccount ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Deleting...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="w-4 h-4" />
+                          Delete Account
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowDeleteDialog(false);
+                        setDeletePassword('');
+                        setDeleteError(null);
+                      }}
+                      disabled={isDeletingAccount}
+                      className="flex-1 border border-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+
+                  {/* Additional Warning */}
+                  <p className="text-xs text-gray-500 text-center mt-4">
+                    You will be logged out immediately after deletion
+                  </p>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Admin Notice - Show for admin users */}
+        {isAdmin && (
+          <div className="bg-blue-50 rounded-2xl shadow-xl p-8 border border-blue-200">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex-1">
+                <h3 className="text-xl font-bold text-blue-800 mb-2">
+                  Administrator Account
+                </h3>
+                <p className="text-blue-600 text-sm">
+                  As an administrator, account deletion is disabled to maintain system integrity. 
+                  Please contact system support if you need to make changes to your administrator account.
+                </p>
+              </div>
+              <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

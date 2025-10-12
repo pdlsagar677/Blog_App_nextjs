@@ -6,37 +6,17 @@
       "email": "admin@gmail.com",
       "phoneNumber": "1234567890",
       "gender": "male",
-      "passwordHash": "$2b$12$tKWButgX9CS6/4jx1BFkPOuXG5EGeIjOrOPK735gtY/qaZgwepXje",
+      "passwordHash": "$2b$12$3sDvJVfRAsQCFFAKipKDpuUFvBdeyvGcwBimiKXm6CX2hH.Dr8naG",
       "isAdmin": true,
-      "createdAt": "2025-10-12T05:29:59.127Z"
-    },
-    "c96jptt0ont": {
-      "username": "test",
-      "email": "test@gmail.com",
-      "phoneNumber": "4356787634",
-      "gender": "male",
-      "passwordHash": "$2b$12$lFdR/lnSCbv.8FePBPLA/.RQwFv261BYQvr.n.JilR3wCTJ1C6bMC",
-      "isAdmin": false,
-      "id": "c96jptt0ont",
-      "createdAt": "2025-10-12T05:33:32.864Z"
+      "createdAt": "2025-10-12T10:36:37.525Z"
     }
   },
   "sessions": {
-    "jhhk4qedbrmgn9v1oj": {
-      "token": "jhhk4qedbrmgn9v1oj",
-      "userId": "c96jptt0ont",
-      "createdAt": 1760247414595
-    },
-    "xigvakqq52mgnhdcmd": {
-      "token": "xigvakqq52mgnhdcmd",
-      "userId": "c96jptt0ont",
-      "createdAt": 1760260025893
-    },
-    "mx79rzxzxamgnhezdg": {
-      "token": "mx79rzxzxamgnhezdg",
-      "userId": "c96jptt0ont",
-      "createdAt": 1760260102036
+    "chq4utoizinmgnl2xzt": {
+      "token": "chq4utoizinmgnl2xzt",
+      "userId": "admin-1",
+      "createdAt": 1760266258841
     }
   },
-  "lastSaved": "2025-10-12T09:08:51.003Z"
+  "lastSaved": "2025-10-12T10:53:37.198Z"
 }

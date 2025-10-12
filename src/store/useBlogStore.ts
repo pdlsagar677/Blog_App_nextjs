@@ -35,6 +35,7 @@ interface BlogState {
   getPostById: (id: string) => BlogPost | undefined;
   getAllPosts: () => BlogPost[];
   deleteComment: (postId: string, commentId: string) => void;
+   deletePostsByAuthor: (authorId: string) => void;
 }
 
 export const useBlogStore = create<BlogState>()(
@@ -125,6 +126,11 @@ export const useBlogStore = create<BlogState>()(
               ? { ...post, comments: post.comments.filter(comment => comment.id !== commentId) }
               : post
           ),
+        }));
+      },
+        deletePostsByAuthor: (authorId: string) => {
+        set((state) => ({
+          posts: state.posts.filter((post) => post.authorId !== authorId),
         }));
       },
     }),
