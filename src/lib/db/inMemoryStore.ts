@@ -1,5 +1,7 @@
 // src/lib/db/inMemoryStore.ts
 import bcryptjs from 'bcryptjs';
+import fs from 'fs';
+import path from 'path';
 
 type User = {
   id: string;
@@ -18,9 +20,95 @@ type Session = {
   createdAt: number;
 };
 
+// Data file path - use relative path instead of process.cwd()
+const DATA_FILE = path.join(process.cwd(), 'data', 'users-data.json');
+
+// Ensure data directory exists
+const ensureDataDirectory = () => {
+  const dataDir = path.dirname(DATA_FILE);
+  if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+  }
+};
+
+// Load data from file
+const loadData = () => {
+  try {
+    ensureDataDirectory();
+    if (fs.existsSync(DATA_FILE)) {
+      const data = fs.readFileSync(DATA_FILE, 'utf-8');
+      const parsed = JSON.parse(data);
+      
+      // Convert date strings back to Date objects for users
+      const users = new Map<string, User>();
+      Object.entries(parsed.users || {}).forEach(([id, userData]: [string, any]) => {
+        users.set(id, {
+          ...userData,
+          createdAt: new Date(userData.createdAt)
+        });
+      });
+      
+      // Convert sessions
+      const sessions = new Map<string, Session>();
+      Object.entries(parsed.sessions || {}).forEach(([token, sessionData]: [string, any]) => {
+        sessions.set(token, sessionData as Session);
+      });
+      
+      return { users, sessions };
+    }
+  } catch (error) {
+    console.error('Error loading data:', error);
+  }
+  
+  return { users: new Map<string, User>(), sessions: new Map<string, Session>() };
+};
+
+// Save data to file
+const saveData = () => {
+  try {
+    ensureDataDirectory();
+    
+    // Convert Maps to plain objects for JSON serialization
+    const usersObj: Record<string, any> = {};
+    db.users.forEach((user, id) => {
+      usersObj[id] = {
+        ...user,
+        createdAt: user.createdAt.toISOString() // Convert Date to string
+      };
+    });
+    
+    const sessionsObj: Record<string, Session> = {};
+    db.sessions.forEach((session, token) => {
+      sessionsObj[token] = session;
+    });
+    
+    const dataToSave = {
+      users: usersObj,
+      sessions: sessionsObj,
+      lastSaved: new Date().toISOString()
+    };
+    
+    fs.writeFileSync(DATA_FILE, JSON.stringify(dataToSave, null, 2));
+    console.log('💾 Users data saved successfully');
+  } catch (error) {
+    console.error('Error saving data:', error);
+  }
+};
+
+// Initialize database with loaded data
+const loadedData = loadData();
+export const db = {
+  users: loadedData.users,
+  sessions: loadedData.sessions,
+};
+
+// Save data automatically every 30 seconds (only in Node.js environment)
+if (typeof window === 'undefined') {
+  setInterval(saveData, 30000);
+}
+
 // Function to initialize admin user from environment variables
 const initializeAdminUser = (): User | null => {
-  // Only create admin user if all required env variables are present
   if (
     process.env.ADMIN_USERNAME &&
     process.env.ADMIN_EMAIL &&
@@ -29,11 +117,9 @@ const initializeAdminUser = (): User | null => {
     process.env.ADMIN_GENDER
   ) {
     try {
-      // For development, use a simple approach. In production, use proper hashing
-      // Note: In a real app, you should hash this asynchronously
       const passwordHash = bcryptjs.hashSync(process.env.ADMIN_PASSWORD, 12);
       
-      return {
+      const adminUser: User = {
         id: 'admin-1',
         username: process.env.ADMIN_USERNAME,
         email: process.env.ADMIN_EMAIL,
@@ -43,29 +129,29 @@ const initializeAdminUser = (): User | null => {
         isAdmin: true,
         createdAt: new Date()
       };
+
+      // Only add admin user if it doesn't exist
+      if (!db.users.has('admin-1')) {
+        db.users.set('admin-1', adminUser);
+        saveData(); // Save after adding admin user
+        console.log('✅ Admin user initialized from environment variables');
+      } else {
+        console.log('✅ Admin user already exists');
+      }
+      
+      return adminUser;
     } catch (error) {
       console.error('Error creating admin user:', error);
       return null;
     }
   }
   
-  console.warn('Admin credentials not found in environment variables. Please check your .env.local file.');
+  console.warn('❌ Admin credentials not found in environment variables. Please check your .env.local file.');
   return null;
-};
-
-export const db = {
-  users: new Map<string, User>(),
-  sessions: new Map<string, Session>(),
 };
 
 // Initialize admin user when the module loads
 const adminUser = initializeAdminUser();
-if (adminUser) {
-  db.users.set(adminUser.id, adminUser);
-  console.log('✅ Admin user initialized from environment variables');
-} else {
-  console.warn('❌ No admin user created. Please check your environment variables in .env.local');
-}
 
 // Helper to create UUIDs (simple version)
 export const generateId = () => Math.random().toString(36).slice(2);
@@ -134,6 +220,7 @@ export const createUser = (userData: Omit<User, 'id' | 'createdAt'>): { success:
   };
 
   db.users.set(newUser.id, newUser);
+  saveData(); // Save after creating user
   return { success: true, user: newUser };
 };
 
@@ -156,33 +243,37 @@ export const findUserByPhone = (phoneNumber: string): User | undefined => {
   );
 };
 
-// Get all users (for admin purposes) - Legacy function
+// Get all users (for admin purposes)
 export const getAllUsers = (): User[] => {
   return [...db.users.values()];
 };
 
-// Delete user (for admin purposes) - Legacy function
+// Delete user (for admin purposes)
 export const deleteUser = (userId: string): boolean => {
-  return db.users.delete(userId);
+  const result = db.users.delete(userId);
+  if (result) saveData(); // Save after deletion
+  return result;
 };
 
-// Make user admin - Legacy function
+// Make user admin
 export const makeUserAdmin = (userId: string): boolean => {
   const user = db.users.get(userId);
   if (user) {
     user.isAdmin = true;
     db.users.set(userId, user);
+    saveData(); // Save after update
     return true;
   }
   return false;
 };
 
-// Remove admin privileges - Legacy function
+// Remove admin privileges
 export const removeUserAdmin = (userId: string): boolean => {
   const user = db.users.get(userId);
-  if (user && user.id !== 'admin-1') { // Prevent removing main admin
+  if (user && user.id !== 'admin-1') {
     user.isAdmin = false;
     db.users.set(userId, user);
+    saveData(); // Save after update
     return true;
   }
   return false;
@@ -248,6 +339,7 @@ export const adminUpdateUser = (userId: string, updates: Partial<Omit<User, 'id'
   };
 
   db.users.set(userId, updatedUser);
+  saveData(); // Save after update
   
   const { passwordHash, ...userWithoutPassword } = updatedUser;
   return { success: true, user: userWithoutPassword };
@@ -278,6 +370,8 @@ export const adminDeleteUser = (userId: string, currentAdminId: string): { succe
       db.sessions.delete(token);
     }
   }
+  
+  saveData(); // Save after deletion
 
   return { success: true };
 };
@@ -305,6 +399,7 @@ export const adminToggleAdminStatus = (userId: string, currentAdminId: string): 
   };
 
   db.users.set(userId, updatedUser);
+  saveData(); // Save after update
   
   const { passwordHash, ...userWithoutPassword } = updatedUser;
   return { success: true, user: userWithoutPassword };
@@ -339,4 +434,27 @@ export const adminGetUserStats = () => {
     female: users.filter(user => user.gender === 'female').length,
     other: users.filter(user => user.gender === 'other').length,
   };
+};
+
+// Session management functions
+export const createSession = (userId: string): Session => {
+  const session: Session = {
+    token: generateId(),
+    userId,
+    createdAt: Date.now(),
+  };
+  
+  db.sessions.set(session.token, session);
+  saveData(); // Save after creating session
+  return session;
+};
+
+export const getSession = (token: string): Session | undefined => {
+  return db.sessions.get(token);
+};
+
+export const deleteSession = (token: string): boolean => {
+  const result = db.sessions.delete(token);
+  if (result) saveData(); // Save after deleting session
+  return result;
 };

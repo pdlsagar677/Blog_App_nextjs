@@ -1,4 +1,6 @@
 // middleware.ts
+export const runtime = "nodejs"; // 👈 Forces Node.js runtime (enables fs/path)
+
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db/inMemoryStore";
 
