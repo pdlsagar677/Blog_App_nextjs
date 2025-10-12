@@ -1,9 +1,23 @@
 // app/page.tsx
 "use client";
 import Link from "next/link";
-import { BookOpen, Users, Heart, ArrowRight, Star, PenTool, Globe, Shield } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useBlogStore } from "@/store/useBlogStore";
+import { BookOpen, Users, Heart, ArrowRight, Star, PenTool, Globe, Shield, Calendar, User, MessageCircle, Eye } from "lucide-react";
 
 export default function LandingPage() {
+  const [featuredPosts, setFeaturedPosts] = useState<any[]>([]);
+  const [isClient, setIsClient] = useState(false);
+  const { getAllPosts } = useBlogStore();
+
+  useEffect(() => {
+    setIsClient(true);
+    const posts = getAllPosts();
+    // Get 3 most recent posts for featured section
+    const recentPosts = posts.slice(0, 3);
+    setFeaturedPosts(recentPosts);
+  }, [getAllPosts]);
+
   const features = [
     {
       icon: <PenTool className="w-12 h-12" />,
@@ -33,6 +47,19 @@ export default function LandingPage() {
     { number: "1M+", label: "Readers" },
     { number: "120+", label: "Countries" }
   ];
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  // Safe array check
+  const safeArrayLength = (array: any) => {
+    return Array.isArray(array) ? array.length : 0;
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
@@ -75,8 +102,99 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Featured Blog Posts Section */}
+      {isClient && featuredPosts.length > 0 && (
+        <section className="py-20 bg-white">
+          <div className="container mx-auto px-6">
+            <div className="text-center mb-16">
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">Featured Stories</h2>
+              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+                Discover the latest stories from our vibrant community of writers.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+              {featuredPosts.map((post) => (
+                <div key={post.id} className="bg-gray-50 rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+                  {/* Image */}
+                  {post.imageUrl && (
+                    <div className="h-48 overflow-hidden">
+                      <img
+                        src={post.imageUrl}
+                        alt={post.title}
+                        className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  )}
+                  
+                  {/* Content */}
+                  <div className="p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-3 line-clamp-2">
+                      {post.title}
+                    </h3>
+                    
+                    <p className="text-gray-600 mb-4 line-clamp-3">
+                      {post.description}
+                    </p>
+                    
+                    {/* Meta Information */}
+                    <div className="flex items-center justify-between text-sm text-gray-500 mb-4">
+                      <div className="flex items-center gap-1">
+                        <User className="w-4 h-4" />
+                        <span>{post.authorName}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="w-4 h-4" />
+                        <span>{formatDate(post.createdAt)}</span>
+                      </div>
+                    </div>
+                    
+                    {/* Engagement Stats */}
+                    <div className="flex items-center justify-between border-t border-gray-200 pt-4">
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-1 text-gray-400">
+                          <Heart className="w-4 h-4" />
+                          <span>{safeArrayLength(post.likes)}</span>
+                        </div>
+                        
+                        <div className="flex items-center gap-1 text-gray-400">
+                          <MessageCircle className="w-4 h-4" />
+                          <span>{safeArrayLength(post.comments)}</span>
+                        </div>
+                      </div>
+                      
+                      <Link
+                        href={`/blog/${post.id}`}
+                        className="text-blue-500 hover:text-blue-600 font-medium flex items-center gap-1 transition-colors"
+                      >
+                        Read More
+                        <ArrowRight className="w-4 h-4" />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* View All Posts CTA */}
+            <div className="text-center mt-12">
+              <Link
+                href="/blog"
+                className="bg-blue-500 hover:bg-blue-600 text-white px-8 py-4 rounded-lg font-medium transition-all duration-200 shadow-lg hover:shadow-xl inline-flex items-center gap-2 text-lg"
+              >
+                <Eye className="w-5 h-5" />
+                View All Stories
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Features Section */}
-      <section className="py-20 bg-white">
+      <section className="py-20 bg-gray-50">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Choose BlogHub?</h2>
@@ -126,7 +244,7 @@ export default function LandingPage() {
       </section>
 
       {/* Testimonials */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 bg-white">
         <div className="container mx-auto px-6">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">Loved by Writers</h2>
@@ -156,7 +274,7 @@ export default function LandingPage() {
                 rating: 5
               }
             ].map((testimonial, index) => (
-              <div key={index} className="bg-white rounded-2xl shadow-lg p-6">
+              <div key={index} className="bg-gray-50 rounded-2xl shadow-lg p-6">
                 <div className="flex items-center gap-1 mb-4">
                   {[...Array(testimonial.rating)].map((_, i) => (
                     <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
@@ -174,7 +292,7 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-16 bg-white border-t border-gray-200">
+      <section className="py-16 bg-gray-50 border-t border-gray-200">
         <div className="container mx-auto px-6 text-center">
           <h2 className="text-3xl font-bold text-gray-900 mb-4">Start Your Writing Journey Today</h2>
           <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
