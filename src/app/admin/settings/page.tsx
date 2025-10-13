@@ -12,7 +12,7 @@ export default function AdminSettings() {
               <p className="text-sm text-gray-600">Put the site in maintenance mode</p>
             </div>
             <button className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded transition-colors">
-              Enable
+              Enable-Not Accessible now 
             </button>
           </div>
           
