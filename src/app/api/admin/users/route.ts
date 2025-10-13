@@ -143,8 +143,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    // In a real app, you'd get the current admin ID from the session
-    const currentAdminId = "admin-1"; // This should come from session
+    const currentAdminId = "admin-1";
 
     const result = adminDeleteUser(userId, currentAdminId);
 
@@ -156,7 +155,12 @@ export async function DELETE(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { message: "User deleted successfully" },
+      { 
+        message: "User account deleted successfully",
+        deletedUserId: userId,
+        // Add this flag to trigger client-side cleanup
+        needsBlogCleanup: true
+      },
       { status: 200 }
     );
 
@@ -168,7 +172,6 @@ export async function DELETE(request: NextRequest) {
     );
   }
 }
-
 export async function PATCH(request: NextRequest) {
   try {
     const { userId, action } = await request.json();

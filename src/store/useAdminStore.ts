@@ -113,35 +113,50 @@ export const useAdminStore = create<AdminState>((set, get) => ({
     }
   },
 
-  deleteUser: async (userId: string) => {
-    set({ isLoading: true, error: null });
-    try {
-      const response = await fetch('/api/admin/users', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId }),
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to delete user');
-      }
-      
-      // Update local state
-      const { users } = get();
-      const updatedUsers = users.filter(user => user.id !== userId);
-      
-      set({ users: updatedUsers, isLoading: false });
-    } catch (error) {
-      set({ 
-        error: error instanceof Error ? error.message : 'Failed to delete user',
-        isLoading: false 
-      });
+ deleteUser: async (userId: string) => {
+  set({ isLoading: true, error: null });
+  try {
+    const response = await fetch('/api/admin/users', {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ userId }),
+    });
+    
+    const data = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(data.error || 'Failed to delete user');
     }
-  },
+    
+    // Delete user's posts from blog store (CLIENT-SIDE)
+    if (data.needsBlogCleanup) {
+      try {
+        const { useBlogStore } = await import('@/store/useBlogStore');
+        const blogStore = useBlogStore.getState();
+        
+        if (blogStore.deletePostsByAuthor) {
+          blogStore.deletePostsByAuthor(userId);
+          console.log(`✅ Deleted all posts for user: ${userId}`);
+        }
+      } catch (blogError) {
+        console.error('Error deleting user posts:', blogError);
+      }
+    }
+    
+    // Update local state
+    const { users } = get();
+    const updatedUsers = users.filter(user => user.id !== userId);
+    
+    set({ users: updatedUsers, isLoading: false });
+  } catch (error) {
+    set({ 
+      error: error instanceof Error ? error.message : 'Failed to delete user',
+      isLoading: false 
+    });
+  }
+},
 
   toggleAdminStatus: async (userId: string) => {
     set({ isLoading: true, error: null });

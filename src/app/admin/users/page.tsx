@@ -48,11 +48,20 @@ export default function AdminUsers() {
     setEditForm({ username: "", email: "", phoneNumber: "", gender: "male" });
   };
 
-  const handleDelete = async (userId: string) => {
-    if (window.confirm("Are you sure you want to delete this user?")) {
-      await deleteUser(userId);
-    }
-  };
+const handleDelete = async (userId: string) => {
+  if (window.confirm("Are you sure you want to delete this user and all their posts?")) {
+    await deleteUser(userId);
+    
+    // Force refresh blog data on all clients
+    setTimeout(() => {
+      // This will trigger a re-render of blog components
+      window.dispatchEvent(new StorageEvent('storage', {
+        key: 'blog-storage',
+        newValue: null
+      }));
+    }, 1000);
+  }
+};
 
   const handleToggleAdmin = async (userId: string) => {
     await toggleAdminStatus(userId);
