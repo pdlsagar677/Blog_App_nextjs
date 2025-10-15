@@ -1,10 +1,10 @@
 // components/blog/CreatePostForm.tsx
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/store/useAuthStore";
 import { useBlogStore } from "@/store/useBlogStore";
-import { ArrowLeft, Image, FileText, Send } from "lucide-react";
+import { ArrowLeft, Image, FileText, Send, Upload, X } from "lucide-react";
 import Link from "next/link";
 
 export default function CreatePostForm() {
@@ -14,6 +14,8 @@ export default function CreatePostForm() {
     description: "",
     content: ""
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -22,6 +24,7 @@ export default function CreatePostForm() {
   const router = useRouter();
   const { user, isLoggedIn } = useAuthStore();
   const { addPost } = useBlogStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check authentication and redirect if not logged in
   useEffect(() => {
@@ -34,6 +37,77 @@ export default function CreatePostForm() {
       setIsCheckingAuth(false);
     }
   }, [isLoggedIn, router]);
+
+  // Clean up image preview URL when component unmounts
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
+  const handleImageUpload = (file: File) => {
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      setErrors(prev => ({ ...prev, imageUrl: 'Please select a valid image file (JPEG, PNG, GIF, WebP)' }));
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    if (file.size > maxSize) {
+      setErrors(prev => ({ ...prev, imageUrl: 'Image size must be less than 5MB' }));
+      return;
+    }
+
+    setImageFile(file);
+    
+    // Create preview URL
+    const previewUrl = URL.createObjectURL(file);
+    setImagePreview(previewUrl);
+    
+    // Clear any previous image URL errors
+    if (errors.imageUrl) {
+      setErrors(prev => ({ ...prev, imageUrl: '' }));
+    }
+    
+    // Clear URL input when file is selected
+    setForm(prev => ({ ...prev, imageUrl: '' }));
+  };
+
+  const handleFileDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+      handleImageUpload(files[0]);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files && files.length > 0) {
+      handleImageUpload(files[0]);
+    }
+  };
+
+  const removeImage = () => {
+    setImageFile(null);
+    if (imagePreview) {
+      URL.revokeObjectURL(imagePreview);
+      setImagePreview("");
+    }
+  };
+
+  const convertImageToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+      reader.readAsDataURL(file);
+    });
+  };
 
   // Show loading while checking authentication
   if (isCheckingAuth || !isLoggedIn || !user) {
@@ -74,7 +148,8 @@ export default function CreatePostForm() {
       newErrors.content = "Content must be at least 50 characters";
     }
 
-    if (form.imageUrl && !isValidUrl(form.imageUrl)) {
+    // If both image file and URL are provided, prefer the file
+    if (!imageFile && form.imageUrl && !isValidUrl(form.imageUrl)) {
       newErrors.imageUrl = "Please enter a valid image URL";
     }
 
@@ -96,6 +171,11 @@ export default function CreatePostForm() {
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: "" }));
     }
+    
+    // Clear file when URL is entered
+    if (field === 'imageUrl' && value && imageFile) {
+      removeImage();
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -110,10 +190,17 @@ export default function CreatePostForm() {
     setMessage("");
 
     try {
+      let finalImageUrl = form.imageUrl;
+
+      // If image file is selected, convert it to base64
+      if (imageFile) {
+        finalImageUrl = await convertImageToBase64(imageFile);
+      }
+
       // Add post to store
       addPost({
         title: form.title,
-        imageUrl: form.imageUrl,
+        imageUrl: finalImageUrl,
         description: form.description,
         content: form.content,
         authorId: user.id,
@@ -129,6 +216,7 @@ export default function CreatePostForm() {
         description: "",
         content: ""
       });
+      removeImage();
 
       // Redirect to blog page after 2 seconds
       setTimeout(() => {
@@ -192,34 +280,85 @@ export default function CreatePostForm() {
               )}
             </div>
 
-            {/* Image URL Field */}
+            {/* Image Upload Field */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 <Image className="w-4 h-4 inline mr-2" />
-                Featured Image URL
+                Featured Image
               </label>
-              <input
-                type="url"
-                placeholder="https://example.com/image.jpg (optional)"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors text-gray-900 placeholder-gray-500"
-                value={form.imageUrl}
-                onChange={(e) => handleChange("imageUrl", e.target.value)}
-              />
-              {errors.imageUrl && (
-                <p className="mt-2 text-sm text-red-600">{errors.imageUrl}</p>
-              )}
-              {form.imageUrl && (
-                <div className="mt-3">
-                  <p className="text-sm text-gray-600 mb-2">Image Preview:</p>
-                  <img
-                    src={form.imageUrl}
-                    alt="Preview"
-                    className="w-32 h-32 object-cover rounded-lg border border-gray-300"
-                    onError={(e) => {
-                      e.currentTarget.style.display = 'none';
-                    }}
+              
+              {/* File Upload Area */}
+              {!imagePreview && !form.imageUrl && (
+                <div
+                  className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
+                  onDrop={handleFileDrop}
+                  onDragOver={(e) => e.preventDefault()}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-gray-600 mb-1">Drag & drop an image here or click to browse</p>
+                  <p className="text-xs text-gray-500">Supports: JPEG, PNG, GIF, WebP (Max 5MB)</p>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                    onChange={handleFileSelect}
+                    className="hidden"
                   />
                 </div>
+              )}
+
+              {/* Image Preview */}
+              {(imagePreview || form.imageUrl) && (
+                <div className="relative">
+                  <div className="flex items-center space-x-4">
+                    <img
+                      src={imagePreview || form.imageUrl}
+                      alt="Preview"
+                      className="w-32 h-32 object-cover rounded-lg border border-gray-300"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                    <div className="flex-1">
+                      <p className="text-sm text-gray-600 mb-2">
+                        {imageFile ? `Selected file: ${imageFile.name}` : 'Image URL preview'}
+                      </p>
+                      <button
+                        type="button"
+                        onClick={removeImage}
+                        className="flex items-center text-red-600 hover:text-red-800 text-sm"
+                      >
+                        <X className="w-4 h-4 mr-1" />
+                        Remove Image
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* OR separator */}
+              {!imagePreview && (
+                <div className="my-4 flex items-center">
+                  <div className="flex-1 border-t border-gray-300"></div>
+                  <span className="mx-4 text-sm text-gray-500">OR</span>
+                  <div className="flex-1 border-t border-gray-300"></div>
+                </div>
+              )}
+
+              {/* URL Input */}
+              {!imagePreview && (
+                <input
+                  type="url"
+                  placeholder="Enter image URL (optional)"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors text-gray-900 placeholder-gray-500"
+                  value={form.imageUrl}
+                  onChange={(e) => handleChange("imageUrl", e.target.value)}
+                />
+              )}
+
+              {errors.imageUrl && (
+                <p className="mt-2 text-sm text-red-600">{errors.imageUrl}</p>
               )}
             </div>
 

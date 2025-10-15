@@ -3,12 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useBlogStore } from "@/store/useBlogStore";
-import { Trash2, Edit, Eye, Plus, Search } from "lucide-react";
+import { Trash2, Edit, Eye, Plus, Search, MoreVertical } from "lucide-react";
 
 export default function AdminPosts() {
   const router = useRouter();
   const { posts, deletePost } = useBlogStore();
   const [searchTerm, setSearchTerm] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState<string | null>(null);
 
   const handleCreatePost = () => {
     router.push("/create-post");
@@ -17,7 +18,18 @@ export default function AdminPosts() {
   const handleDeletePost = (postId: string) => {
     if (window.confirm("Are you sure you want to delete this post?")) {
       deletePost(postId);
+      setMobileMenuOpen(null);
     }
+  };
+
+  const handleEditPost = (postId: string) => {
+    router.push(`/blog/${postId}`);
+    setMobileMenuOpen(null);
+  };
+
+  const handleViewPost = (postId: string) => {
+    router.push(`/blog/${postId}`);
+    setMobileMenuOpen(null);
   };
 
   // Filter posts based on search term (title and author)
@@ -54,74 +66,139 @@ export default function AdminPosts() {
       </div>
       
       <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Title
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Author
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {filteredPosts.length === 0 ? (
+        {/* Desktop Table */}
+        <div className="hidden md:block">
+          <table className="w-full">
+            <thead className="bg-gray-50">
               <tr>
-                <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                  {searchTerm ? `No posts found for "${searchTerm}"` : "No posts available"}
-                </td>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Title
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Author
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Date
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
-            ) : (
-              filteredPosts.map((post) => (
-                <tr key={post.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{post.title}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{post.authorName}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">
-                      {new Date(post.createdAt).toLocaleDateString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center space-x-3">
-                      <button
-                        onClick={() => router.push(`/blog/${post.id}`)}
-                        className="text-blue-600 hover:text-blue-900 transition-colors p-2 rounded-lg hover:bg-blue-50"
-                        title="View Post"
-                      >
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => router.push(`/blog/${post.id}`)}
-                        className="text-green-600 hover:text-green-900 transition-colors p-2 rounded-lg hover:bg-green-50"
-                        title="Edit Post"
-                      >
-                        <Edit className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeletePost(post.id)}
-                        className="text-red-600 hover:text-red-900 transition-colors p-2 rounded-lg hover:bg-red-50"
-                        title="Delete Post"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {filteredPosts.length === 0 ? (
+                <tr>
+                  <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                    {searchTerm ? `No posts found for "${searchTerm}"` : "No posts available"}
                   </td>
                 </tr>
+              ) : (
+                filteredPosts.map((post) => (
+                  <tr key={post.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{post.title}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{post.authorName}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">
+                        {new Date(post.createdAt).toLocaleDateString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center space-x-3">
+                        <button
+                          onClick={() => handleViewPost(post.id)}
+                          className="text-blue-600 hover:text-blue-900 transition-colors p-2 rounded-lg hover:bg-blue-50"
+                          title="View Post"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleEditPost(post.id)}
+                          className="text-green-600 hover:text-green-900 transition-colors p-2 rounded-lg hover:bg-green-50"
+                          title="Edit Post"
+                        >
+                          <Edit className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeletePost(post.id)}
+                          className="text-red-600 hover:text-red-900 transition-colors p-2 rounded-lg hover:bg-red-50"
+                          title="Delete Post"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile Cards */}
+        <div className="md:hidden">
+          <div className="divide-y divide-gray-200">
+            {filteredPosts.length === 0 ? (
+              <div className="px-4 py-8 text-center text-gray-500">
+                {searchTerm ? `No posts found for "${searchTerm}"` : "No posts available"}
+              </div>
+            ) : (
+              filteredPosts.map((post) => (
+                <div key={post.id} className="p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1">
+                      <div className="text-lg font-medium text-gray-900 mb-1">{post.title}</div>
+                      <div className="text-sm text-gray-600 mb-1">By {post.authorName}</div>
+                      <div className="text-sm text-gray-500">
+                        {new Date(post.createdAt).toLocaleDateString()}
+                      </div>
+                    </div>
+                    
+                    {/* Mobile Menu Button */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setMobileMenuOpen(mobileMenuOpen === post.id ? null : post.id)}
+                        className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+                      >
+                        <MoreVertical className="w-5 h-5 text-gray-500" />
+                      </button>
+                      
+                      {/* Mobile Dropdown Menu */}
+                      {mobileMenuOpen === post.id && (
+                        <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10 py-1">
+                          <button
+                            onClick={() => handleViewPost(post.id)}
+                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+                          >
+                            <Eye className="w-4 h-4" />
+                            <span>View Post</span>
+                          </button>
+                          <button
+                            onClick={() => handleEditPost(post.id)}
+                            className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
+                          >
+                            <Edit className="w-4 h-4" />
+                            <span>Edit Post</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeletePost(post.id)}
+                            className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-gray-50 flex items-center space-x-2"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            <span>Delete Post</span>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               ))
             )}
-          </tbody>
-        </table>
+          </div>
+        </div>
         
         {/* Results Count */}
         {filteredPosts.length > 0 && (
